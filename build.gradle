@@ -1,0 +1,85 @@
+group 'com.prefanatic'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    ext.kotlin_version = '1.1.4-2'
+
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'org.hidetake:gradle-ssh-plugin:2.9.0'
+    }
+}
+
+apply plugin: 'kotlin'
+apply plugin: 'org.hidetake.ssh'
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+
+    compile group: 'org.eclipse.paho', name: 'org.eclipse.paho.client.mqttv3', version: '1.2.0'
+    compile 'io.reactivex.rxjava2:rxjava:2.1.4'
+    compile 'io.reactivex.rxjava2:rxkotlin:2.1.0'
+    compile 'com.squareup.moshi:moshi-kotlin:1.5.0'
+
+    compile "com.xenomachina:kotlin-argparser:2.0.3"
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+remotes {
+    pi {
+        role 'masterNode'
+        host = 'misterman'
+        user = 'cody'
+        password = 'Pemdas'
+    }
+}
+
+task deploy(dependsOn: jar) << {
+    ssh.run {
+        settings {
+            knownHosts = allowAnyHosts
+        }
+        session(remotes.pi) {
+            put from: 'build/libs/communicator-1.0-SNAPSHOT.jar', into: '/home/cody/'
+            execute 'java -jar /home/cody/communicator-1.0-SNAPSHOT.jar'
+        }
+    }
+}
+
+task deployLocal(dependsOn: jar) << {
+
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'com.prefanatic.AppKt'
+        )
+    }
+
+    // This line of code recursively collects and copies all of a project's files
+    // and adds them to the JAR itself. One can extend this task, to skip certain
+    // files or particular types at will
+    //from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }  }
+
+    // adds runtime dependencies to jar package
+    from(configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }) {
+        // remove all signature files
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }}
