@@ -69,9 +69,9 @@ fun main(args: Array<String>) {
     client.connect()
             .observeOn(Schedulers.newThread())
             .flatMap { heartbeat() }
-            .flatMapObservable { client.subscribe("/register", 0) }
+            .flatMapObservable { client.subscribeAndObserve("/register", 0) }
             .subscribe({
-                val node = nodeAdapter.fromJson(it.second.payload.toString(Charsets.UTF_8))!!
+                val node = nodeAdapter.fromJson(it.message.payload.toString(Charsets.UTF_8))!!
                 println(node)
                 performOta(node)
 
