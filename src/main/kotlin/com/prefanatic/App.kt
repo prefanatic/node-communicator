@@ -19,6 +19,7 @@ val moshi = Moshi.Builder()
 val nodeAdapter = moshi.adapter<Node>(Node::class.java)
 val otaStartAdapter = moshi.adapter<OtaStart>(OtaStart::class.java)
 val otaWriteAdapter = moshi.adapter<OtaWrite>(OtaWrite::class.java)
+val logEntryAdapter = moshi.adapter<LogEntry>(LogEntry::class.java)
 
 val client = RxMqttClient("tcp://misterman:1883", "communicator")
 
@@ -64,11 +65,35 @@ private fun performOta(node: Node) {
     }
 }
 
+val logFile: File by lazy {
+    val file = File("log.csv")
+    file
+}
+
+data class LogEntry(val x: Int, val y: Int, val z: Int)
+
+fun logData() {
+    val buffer = logFile.bufferedWriter()
+    buffer.write("x, y, z")
+    buffer.newLine()
+
+    client.subscribeAndObserve("/data", 0)
+            .subscribe {
+
+                val entry = logEntryAdapter.fromJson(it.message.payload.toString(Charsets.UTF_8))
+                buffer.write("${entry!!.x}, ${entry!!.y}, ${entry!!.z}")
+                buffer.newLine()
+                buffer.flush()
+
+            }
+}
+
 fun main(args: Array<String>) {
     println("Hello World!")
     client.connect()
             .observeOn(Schedulers.newThread())
             .flatMap { heartbeat() }
+            .doOnSuccess { logData() }
             .flatMapObservable { client.subscribeAndObserve("/register", 0) }
             .subscribe({
                 val node = nodeAdapter.fromJson(it.message.payload.toString(Charsets.UTF_8))!!
