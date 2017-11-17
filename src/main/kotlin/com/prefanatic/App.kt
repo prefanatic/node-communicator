@@ -52,7 +52,7 @@ private fun performOta(node: Node) {
 
                                     client.publish("/ota/${node.id}/part", contents, 2, false)
                                             .doOnSuccess { println("Sent $i -- ${part.content}") }
-                                            .delay(100, TimeUnit.MILLISECONDS)
+                                            .delay(150, TimeUnit.MILLISECONDS)
                                             .toObservable()
                                 }
                                 .lastOrError()
